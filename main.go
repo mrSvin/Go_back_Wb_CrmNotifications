@@ -83,7 +83,7 @@ func main() {
 	notificationService := service.NewNotificationService(notificationRepo)
 	notificationHandler := handlers.NewNotificationHandler(notificationService)
 
-	http.HandleFunc("/notifications", func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/notifications", corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			notificationHandler.CreateNotification(w, r)
@@ -92,8 +92,22 @@ func main() {
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	})))
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*") // Замените "*" на домен вашего клиента для повышения безопасности
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+
+		if r.Method == "OPTIONS" {
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
